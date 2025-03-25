@@ -78,7 +78,7 @@ namespace Lockstep.Game {
             //bind events
             foreach (var mgr in _mgrContainer.AllMgrs) {
                 _registerService.RegisterEvent<EEvent, GlobalEventHandler>("OnEvent_", "OnEvent_".Length,
-                    EventHelper.AddListener, mgr);
+                    EventHelper.AddListener, mgr); // EventRegisterService.RegisterEvent, 用反射把service里面的OnEvent_开头的方法和EEvent里面的类型一一对应, 最后通过EventHelper.AddListener将这些函数作为事件Listener注册到EventHelper里面
             }
 
             foreach (var mgr in _mgrContainer.AllMgrs) {
@@ -119,21 +119,21 @@ namespace Lockstep.Game {
 
 
             if (IsVideoMode) {
-                EventHelper.Trigger(EEvent.BorderVideoFrame, FramesInfo);
-                EventHelper.Trigger(EEvent.OnGameCreate, GameStartInfo);
+                EventHelper.Trigger(EEvent.BorderVideoFrame, FramesInfo); // 触发函数OnEvent_BorderVideoFrame
+                EventHelper.Trigger(EEvent.OnGameCreate, GameStartInfo); // OnEvent_OnGameCreate
             }
             else if (IsClientMode) {
                 GameStartInfo = _serviceContainer.GetService<IGameConfigService>().ClientModeInfo;
-                EventHelper.Trigger(EEvent.OnGameCreate, GameStartInfo);
-                EventHelper.Trigger(EEvent.LevelLoadDone, GameStartInfo);
+                EventHelper.Trigger(EEvent.OnGameCreate, GameStartInfo); // OnEvent_OnGameCreate
+                EventHelper.Trigger(EEvent.LevelLoadDone, GameStartInfo); // OnEvent_LevelLoadDone
             }
         }
 
         public void DoUpdate(float fDeltaTime){
-            _syncContext.Update();
-            Utils.UpdateServices();
+            _syncContext.Update(); // JTAOO: 多线程???
+            Utils.UpdateServices(); // LTime和CoroutineHelper的Update
             var deltaTime = fDeltaTime.ToLFloat();
-            _networkService.DoUpdate(deltaTime);
+            _networkService.DoUpdate(deltaTime); // 这里update网络, 注意网络service是在统一的DoAwake和DoStart里面初始化的
             if (IsVideoMode && IsRunVideo && CurTick < MaxRunTick) {
                 _simulatorService.RunVideo();
                 return;
@@ -143,7 +143,8 @@ namespace Lockstep.Game {
                 _simulatorService.JumpTo(JumpToTick);
             }
 
-            _simulatorService.DoUpdate(fDeltaTime);
+            _simulatorService.DoUpdate(fDeltaTime); // 客户端主要的逻辑模块
+            // 注意, 每个Service不一定都有update函数
         }
 
         public void DoDestroy(){

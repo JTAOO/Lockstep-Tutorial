@@ -229,18 +229,18 @@ namespace Lockstep.Game {
                 return;
             }
 
-            _cmdBuffer.DoUpdate(deltaTime);
+            _cmdBuffer.DoUpdate(deltaTime); // FrameBuffer.Update
 
             //client mode no network
             if (_constStateService.IsClientMode) {
-                DoClientUpdate();
+                DoClientUpdate(); // 单机模式
             }
             else {
                 while (inputTick <= inputTargetTick) {
                     SendInputs(inputTick++);
                 }
 
-                DoNormalUpdate();
+                DoNormalUpdate(); // 网络模式
             }
         }
 
