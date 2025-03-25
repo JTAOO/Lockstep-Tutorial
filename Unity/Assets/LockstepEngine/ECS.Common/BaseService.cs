@@ -3,6 +3,7 @@ using System.Text;
 using Lockstep.Math;
 
 namespace Lockstep.Game {
+    // 所有的BaseService都继承ServiceReferenceHolder, 应该是为了像单例一样每个service都能获取到其他的service
     public abstract partial class BaseService : ServiceReferenceHolder, IService, ILifeCycle, ITimeMachine ,IHashCode,IDumpStr{
         public virtual void DoInit(object objParent){}
         public virtual void DoAwake(IServiceContainer services){ }
@@ -17,7 +18,7 @@ namespace Lockstep.Game {
             cmdBuffer.Init(this, GetRollbackFunc());
         }
 
-        
+
         protected ICommandBuffer cmdBuffer;
 
         protected virtual FuncUndoCommands GetRollbackFunc(){

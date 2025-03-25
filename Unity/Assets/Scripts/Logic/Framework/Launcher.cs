@@ -18,7 +18,7 @@ namespace Lockstep.Game {
 
         public static Launcher Instance { get; private set; }
 
-        private ServiceContainer _serviceContainer;
+        private ServiceContainer _serviceContainer; // ServiceContainer不止一个地方有存储
         private ManagerContainer _mgrContainer;
         private TimeMachineContainer _timeMachineContainer;
         private IEventRegisterService _registerService;
@@ -40,7 +40,7 @@ namespace Lockstep.Game {
         public bool IsClientMode => _constStateService.IsClientMode;
 
         public object transform;
-        private OneThreadSynchronizationContext _syncContext; 
+        private OneThreadSynchronizationContext _syncContext;
         public void DoAwake(IServiceContainer services){
             _syncContext = new OneThreadSynchronizationContext();
             SynchronizationContext.SetSynchronizationContext(_syncContext);
@@ -61,7 +61,7 @@ namespace Lockstep.Game {
             foreach (var service in svcs) {
                 _timeMachineContainer.RegisterTimeMachine(service as ITimeMachine);
                 if (service is BaseService baseService) {
-                    _mgrContainer.RegisterManager(baseService);
+                    _mgrContainer.RegisterManager(baseService); // 似乎命名上, manager就等同于service
                 }
             }
 
@@ -72,7 +72,7 @@ namespace Lockstep.Game {
 
         public void DoStart(){
             foreach (var mgr in _mgrContainer.AllMgrs) {
-                mgr.InitReference(_serviceContainer, _mgrContainer);
+                mgr.InitReference(_serviceContainer, _mgrContainer); // 对所有的service执行初始化, 让它们都可以互相拿到对象索引
             }
 
             //bind events

@@ -13,12 +13,12 @@ public class MainScript : MonoBehaviour {
     public string RecordFilePath;
     public bool HasInit = false;
 
-    private ServiceContainer _serviceContainer;
+    private ServiceContainer _serviceContainer; // JTAOO: 为什么ServiceContainer放在系统外面?
 
     private void Awake(){
         gameObject.AddComponent<PingMono>();
         gameObject.AddComponent<InputMono>();
-        _serviceContainer = new UnityServiceContainer();
+        _serviceContainer = new UnityServiceContainer(); // new了之后会立刻将一些service注册进service列表, 所以下面就可以GetService
         _serviceContainer.GetService<IConstStateService>().GameName = "ARPGDemo";
         _serviceContainer.GetService<IConstStateService>().IsClientMode = IsClientMode;
         _serviceContainer.GetService<IConstStateService>().IsVideoMode = IsVideoMode;
