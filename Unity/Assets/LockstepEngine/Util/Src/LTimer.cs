@@ -73,7 +73,7 @@ namespace Lockstep.Util {
         }
 
         private static IEnumerator StartWaitingSeconds(float time, Action callback){
-            yield return new WaitForSeconds(time);
+            yield return new WaitForSeconds(time); // 注意, 这里的WaitForSeconds是一个自己实现的类
             callback.Invoke();
         }
 

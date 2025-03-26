@@ -131,11 +131,11 @@ namespace Lockstep.Util
                         continue;
                     }
 
-                    if (item.routine.MoveNext())
+                    if (item.routine.MoveNext()) // 手动模拟Monobehaviour对携程的update
                     {
                         SetRoutineInfo(ref item);
                     }
-                    else
+                    else // 携程结束, 应该去除
                     {
                         lstNeedDelIndex.Add(i);
                     }

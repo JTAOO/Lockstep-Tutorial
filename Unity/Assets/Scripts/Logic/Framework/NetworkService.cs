@@ -11,7 +11,7 @@ namespace Lockstep.Game {
             Instance = this;
         }
 
-        public string ServerIp = "127.0.0.1";
+        public string ServerIp = "127.0.0.1"; // 需要暴露出去
         public int ServerPort = 10083;
 
         private long _playerID;
