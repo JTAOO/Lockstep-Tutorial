@@ -15,8 +15,10 @@ using UnityEngine;
 using Debug = Lockstep.Logging.Debug;
 using Logger = Lockstep.Logging.Logger;
 
-namespace Lockstep.Game {
-    public class SimulatorService : BaseGameService, ISimulatorService, IDebugService {
+namespace Lockstep.Game
+{
+    public class SimulatorService : BaseGameService, ISimulatorService, IDebugService
+    {
         public static SimulatorService Instance { get; private set; }
         public int __debugRockbackToTick;
 
@@ -65,7 +67,7 @@ namespace Lockstep.Game {
 
         private bool _isDebugRollback = true;
 
-        //refs 
+        //refs
         private IManagerContainer _mgrContainer;
         private IServiceContainer _serviceContainer;
 
@@ -73,38 +75,45 @@ namespace Lockstep.Game {
         public int snapshotFrameInterval = 1;
         private bool _hasRecvInputMsg;
 
-        public SimulatorService(){
+        public SimulatorService()
+        {
             Instance = this;
         }
 
-        public override void InitReference(IServiceContainer serviceContainer, IManagerContainer mgrContainer){
+        public override void InitReference(IServiceContainer serviceContainer, IManagerContainer mgrContainer)
+        {
             base.InitReference(serviceContainer, mgrContainer);
             _serviceContainer = serviceContainer;
             _mgrContainer = mgrContainer;
         }
 
-        public override void DoStart(){
+        public override void DoStart()
+        {
             snapshotFrameInterval = 1;
-            if (_constStateService.IsVideoMode) {
+            if (_constStateService.IsVideoMode)
+            {
                 snapshotFrameInterval = _constStateService.SnapshotFrameInterval;
             }
 
             _cmdBuffer = new FrameBuffer(this, _networkService, 2000, snapshotFrameInterval, MaxPredictFrameCount);
             _world = new World();
             _hashHelper = new HashHelper(_serviceContainer, _world, _networkService, _cmdBuffer);
-            _dumpHelper = new DumpHelper(_serviceContainer, _world,_hashHelper);
+            _dumpHelper = new DumpHelper(_serviceContainer, _world, _hashHelper);
         }
 
-        public override void DoDestroy(){
+        public override void DoDestroy()
+        {
             IsRunning = false;
             _dumpHelper.DumpAll();
         }
 
 
-        public void OnGameCreate(int targetFps, byte localActorId, byte actorCount, bool isNeedRender = true){
+        public void OnGameCreate(int targetFps, byte localActorId, byte actorCount, bool isNeedRender = true)
+        {
             FrameBuffer.__debugMainActorID = localActorId;
             var allActors = new byte[actorCount];
-            for (byte i = 0; i < actorCount; i++) {
+            for (byte i = 0; i < actorCount; i++)
+            {
                 allActors[i] = i;
             }
 
@@ -119,14 +128,17 @@ namespace Lockstep.Game {
         }
 
 
-        public void StartSimulate(){
-            if (IsRunning) {
+        public void StartSimulate()
+        {
+            if (IsRunning)
+            {
                 Debug.LogError("Already started!");
                 return;
             }
 
             IsRunning = true;
-            if (_constStateService.IsClientMode) {
+            if (_constStateService.IsClientMode)
+            {
                 _gameStartTimestampMs = LTime.realtimeSinceStartupMS;
             }
 
@@ -134,26 +146,32 @@ namespace Lockstep.Game {
             Debug.Log($"Game Start");
             EventHelper.Trigger(EEvent.SimulationStart, null);
 
-            while (inputTick < PreSendInputCount) {
+            while (inputTick < PreSendInputCount)
+            {
                 SendInputs(inputTick++);
             }
         }
 
-        public void Trace(string msg, bool isNewLine = false, bool isNeedLogTrace = false){
+        public void Trace(string msg, bool isNewLine = false, bool isNeedLogTrace = false)
+        {
             _dumpHelper.Trace(msg, isNewLine, isNeedLogTrace);
         }
 
 
-        public void JumpTo(int tick){
+        public void JumpTo(int tick)
+        {
             if (tick + 1 == _world.Tick || tick == _world.Tick) return;
             tick = LMath.Min(tick, _videoFrames.frames.Length - 1);
             var time = LTime.realtimeSinceStartupMS + 0.05f;
-            if (!_isInitVideo) {
+            if (!_isInitVideo)
+            {
                 _constStateService.IsVideoLoading = true;
-                while (_world.Tick < _videoFrames.frames.Length) {
+                while (_world.Tick < _videoFrames.frames.Length)
+                {
                     var sFrame = _videoFrames.frames[_world.Tick];
                     Simulate(sFrame, true);
-                    if (LTime.realtimeSinceStartupMS > time) {
+                    if (LTime.realtimeSinceStartupMS > time)
+                    {
                         EventHelper.Trigger(EEvent.VideoLoadProgress, _world.Tick * 1.0f / _videoFrames.frames.Length);
                         return;
                     }
@@ -164,11 +182,13 @@ namespace Lockstep.Game {
                 _isInitVideo = true;
             }
 
-            if (_world.Tick > tick) {
+            if (_world.Tick > tick)
+            {
                 RollbackTo(tick, _videoFrames.frames.Length, false);
             }
 
-            while (_world.Tick <= tick) {
+            while (_world.Tick <= tick)
+            {
                 var sFrame = _videoFrames.frames[_world.Tick];
                 Simulate(sFrame, false);
             }
@@ -179,64 +199,80 @@ namespace Lockstep.Game {
         }
 
 
-        public void RunVideo(){
-            if (_tickOnLastJumpTo == _world.Tick) {
+        public void RunVideo()
+        {
+            if (_tickOnLastJumpTo == _world.Tick)
+            {
                 _timestampOnLastJumpToMs = LTime.realtimeSinceStartupMS;
                 _tickOnLastJumpTo = _world.Tick;
             }
 
             var frameDeltaTime = (LTime.timeSinceLevelLoad - _timestampOnLastJumpToMs) * 1000;
             var targetTick = System.Math.Ceiling(frameDeltaTime / NetworkDefine.UPDATE_DELTATIME) + _tickOnLastJumpTo;
-            while (_world.Tick <= targetTick) {
-                if (_world.Tick < _videoFrames.frames.Length) {
+            while (_world.Tick <= targetTick)
+            {
+                if (_world.Tick < _videoFrames.frames.Length)
+                {
                     var sFrame = _videoFrames.frames[_world.Tick];
                     Simulate(sFrame, false);
                 }
-                else {
+                else
+                {
                     break;
                 }
             }
         }
 
-        public void DoUpdate(float deltaTime){
-            if (!IsRunning) {
+        public void DoUpdate(float deltaTime)
+        {
+            if (!IsRunning)
+            {
                 return;
             }
 
-            if (_hasRecvInputMsg) {
-                if (_gameStartTimestampMs == -1) {
-                    _gameStartTimestampMs = LTime.realtimeSinceStartupMS;
+            if (_hasRecvInputMsg)
+            {
+                if (_gameStartTimestampMs == -1)
+                {
+                    _gameStartTimestampMs = LTime.realtimeSinceStartupMS; // 初始化游戏逻辑启动时间
                 }
             }
 
-            if (_gameStartTimestampMs <= 0) {
+            if (_gameStartTimestampMs <= 0)
+            { // 如果没启动直接返回
                 return;
             }
 
-            _tickSinceGameStart =
-                (int) ((LTime.realtimeSinceStartupMS - _gameStartTimestampMs) / NetworkDefine.UPDATE_DELTATIME);
-            if (_constStateService.IsVideoMode) {
+            // 游戏运行时间直接转化成帧号 (不推荐这么干)
+            _tickSinceGameStart = (int)((LTime.realtimeSinceStartupMS - _gameStartTimestampMs) / NetworkDefine.UPDATE_DELTATIME);
+            if (_constStateService.IsVideoMode)
+            {
                 return;
             }
 
-            if (__debugRockbackToTick > 0) {
+            if (__debugRockbackToTick > 0)
+            {
                 GetService<ICommonStateService>().IsPause = true;
                 RollbackTo(__debugRockbackToTick, 0, false);
                 __debugRockbackToTick = -1;
             }
 
-            if (_commonStateService.IsPause) {
+            if (_commonStateService.IsPause) // 暂停?
+            {
                 return;
             }
 
             _cmdBuffer.DoUpdate(deltaTime); // FrameBuffer.Update
 
             //client mode no network
-            if (_constStateService.IsClientMode) {
+            if (_constStateService.IsClientMode)
+            {
                 DoClientUpdate(); // 单机模式
             }
-            else {
-                while (inputTick <= inputTargetTick) {
+            else
+            {
+                while (inputTick <= inputTargetTick)
+                {
                     SendInputs(inputTick++);
                 }
 
@@ -245,58 +281,70 @@ namespace Lockstep.Game {
         }
 
 
-        private void DoClientUpdate(){
+        private void DoClientUpdate()
+        {
             int maxRollbackCount = 5;
-            if (_isDebugRollback && _world.Tick > maxRollbackCount && _world.Tick % maxRollbackCount == 0) {
+            if (_isDebugRollback && _world.Tick > maxRollbackCount && _world.Tick % maxRollbackCount == 0)
+            {
                 var rawTick = _world.Tick;
                 var revertCount = LRandom.Range(1, maxRollbackCount);
-                for (int i = 0; i < revertCount; i++) {
+                for (int i = 0; i < revertCount; i++)
+                {
                     var input = new Msg_PlayerInput(_world.Tick, LocalActorId, _inputService.GetDebugInputCmds());
-                    var frame = new ServerFrame() {
+                    var frame = new ServerFrame()
+                    {
                         tick = rawTick - i,
-                        _inputs = new Msg_PlayerInput[] {input}
+                        _inputs = new Msg_PlayerInput[] { input }
                     };
                     _cmdBuffer.ForcePushDebugFrame(frame);
                 }
                 _debugService.Trace("RollbackTo " + (_world.Tick - revertCount));
-                if (!RollbackTo(_world.Tick - revertCount, _world.Tick)) {
+                if (!RollbackTo(_world.Tick - revertCount, _world.Tick))
+                {
                     _commonStateService.IsPause = true;
                     return;
                 }
 
-                while (_world.Tick < rawTick) {
+                while (_world.Tick < rawTick)
+                {
                     var sFrame = _cmdBuffer.GetServerFrame(_world.Tick);
                     Logging.Debug.Assert(sFrame != null && sFrame.tick == _world.Tick,
                         $" logic error: server Frame  must exist tick {_world.Tick}");
                     _cmdBuffer.PushLocalFrame(sFrame);
                     Simulate(sFrame);
-                    if (_commonStateService.IsPause) {
+                    if (_commonStateService.IsPause)
+                    {
                         return;
                     }
                 }
             }
 
-            while (_world.Tick < TargetTick) {
+            while (_world.Tick < TargetTick)
+            {
                 FramePredictCount = 0;
                 var input = new Msg_PlayerInput(_world.Tick, LocalActorId, _inputService.GetInputCmds());
-                var frame = new ServerFrame() {
+                var frame = new ServerFrame()
+                {
                     tick = _world.Tick,
-                    _inputs = new Msg_PlayerInput[] {input}
+                    _inputs = new Msg_PlayerInput[] { input }
                 };
                 _cmdBuffer.PushLocalFrame(frame);
-                _cmdBuffer.PushServerFrames(new ServerFrame[] {frame});
+                _cmdBuffer.PushServerFrames(new ServerFrame[] { frame });
                 Simulate(_cmdBuffer.GetFrame(_world.Tick));
-                if (_commonStateService.IsPause) {
+                if (_commonStateService.IsPause)
+                {
                     return;
                 }
             }
         }
 
 
-        private void DoNormalUpdate(){
+        private void DoNormalUpdate()
+        {
             //make sure client is not move ahead too much than server
             var maxContinueServerTick = _cmdBuffer.MaxContinueServerTick;
-            if ((_world.Tick - maxContinueServerTick) > MaxPredictFrameCount) {
+            if ((_world.Tick - maxContinueServerTick) > MaxPredictFrameCount)
+            {
                 return;
             }
 
@@ -304,35 +352,41 @@ namespace Lockstep.Game {
 
             // Pursue Server frames
             var deadline = LTime.realtimeSinceStartupMS + MaxSimulationMsPerFrame;
-            while (_world.Tick < _cmdBuffer.CurTickInServer) {
+            while (_world.Tick < _cmdBuffer.CurTickInServer)
+            {
                 var tick = _world.Tick;
                 var sFrame = _cmdBuffer.GetServerFrame(tick);
-                if (sFrame == null) {
+                if (sFrame == null)
+                {
                     OnPursuingFrame();
                     return;
                 }
 
                 _cmdBuffer.PushLocalFrame(sFrame);
                 Simulate(sFrame, tick == minTickToBackup);
-                if (LTime.realtimeSinceStartupMS > deadline) {
+                if (LTime.realtimeSinceStartupMS > deadline)
+                {
                     OnPursuingFrame();
                     return;
                 }
             }
 
-            if (_constStateService.IsPursueFrame) {
+            if (_constStateService.IsPursueFrame)
+            {
                 _constStateService.IsPursueFrame = false;
                 EventHelper.Trigger(EEvent.PursueFrameDone);
             }
 
 
             // Roll back
-            if (_cmdBuffer.IsNeedRollback) {
+            if (_cmdBuffer.IsNeedRollback)
+            {
                 RollbackTo(_cmdBuffer.NextTickToCheck, maxContinueServerTick);
                 CleanUselessSnapshot(System.Math.Min(_cmdBuffer.NextTickToCheck - 1, _world.Tick));
 
                 minTickToBackup = System.Math.Max(minTickToBackup, _world.Tick + 1);
-                while (_world.Tick <= maxContinueServerTick) {
+                while (_world.Tick <= maxContinueServerTick)
+                {
                     var sFrame = _cmdBuffer.GetServerFrame(_world.Tick);
                     Logging.Debug.Assert(sFrame != null && sFrame.tick == _world.Tick,
                         $" logic error: server Frame  must exist tick {_world.Tick}");
@@ -343,14 +397,17 @@ namespace Lockstep.Game {
 
 
             //Run frames
-            while (_world.Tick <= TargetTick) {
+            while (_world.Tick <= TargetTick)
+            {
                 var curTick = _world.Tick;
                 ServerFrame frame = null;
                 var sFrame = _cmdBuffer.GetServerFrame(curTick);
-                if (sFrame != null) {
+                if (sFrame != null)
+                {
                     frame = sFrame;
                 }
-                else {
+                else
+                {
                     var cFrame = _cmdBuffer.GetLocalFrame(curTick);
                     FillInputWithLastFrame(cFrame);
                     frame = cFrame;
@@ -363,7 +420,8 @@ namespace Lockstep.Game {
             _hashHelper.CheckAndSendHashCodes();
         }
 
-        void SendInputs(int curTick){
+        void SendInputs(int curTick)
+        {
             var input = new Msg_PlayerInput(curTick, LocalActorId, _inputService.GetInputCmds());
             var cFrame = new ServerFrame();
             var inputs = new Msg_PlayerInput[_actorCount];
@@ -376,27 +434,32 @@ namespace Lockstep.Game {
             //    var playerInput = new Deserializer(input.Commands[0].content).Parse<Lockstep.Game.PlayerInput>();
             //    Debug.Log($"SendInput curTick{curTick} maxSvrTick{_cmdBuffer.MaxServerTickInBuffer} _tickSinceGameStart {_tickSinceGameStart} uv {playerInput.inputUV}");
             //}
-            if (curTick > _cmdBuffer.MaxServerTickInBuffer) {
-                //TODO combine all history inputs into one Msg 
+            if (curTick > _cmdBuffer.MaxServerTickInBuffer)
+            {
+                //TODO combine all history inputs into one Msg
                 //Debug.Log("SendInput " + curTick +" _tickSinceGameStart " + _tickSinceGameStart);
                 _cmdBuffer.SendInput(input);
             }
         }
 
 
-        private void Simulate(ServerFrame frame, bool isNeedGenSnap = true){
+        private void Simulate(ServerFrame frame, bool isNeedGenSnap = true)
+        {
             Step(frame, isNeedGenSnap);
         }
 
-        private void Predict(ServerFrame frame, bool isNeedGenSnap = true){
+        private void Predict(ServerFrame frame, bool isNeedGenSnap = true)
+        {
             Step(frame, isNeedGenSnap);
         }
 
-        private bool RollbackTo(int tick, int maxContinueServerTick, bool isNeedClear = true){
+        private bool RollbackTo(int tick, int maxContinueServerTick, bool isNeedClear = true)
+        {
             _world.RollbackTo(tick, maxContinueServerTick, isNeedClear);
             var hash = _commonStateService.Hash;
             var curHash = _hashHelper.CalcHash();
-            if (hash != curHash) {
+            if (hash != curHash)
+            {
                 Debug.LogError($"tick:{tick} Rollback error: Hash isDiff oldHash ={hash}  curHash{curHash}");
 #if UNITY_EDITOR
                 _dumpHelper.DumpToFile(true);
@@ -407,7 +470,8 @@ namespace Lockstep.Game {
         }
 
 
-        void Step(ServerFrame frame, bool isNeedGenSnap = true){
+        void Step(ServerFrame frame, bool isNeedGenSnap = true)
+        {
             //Debug.Log("Step: " + _world.Tick + " TargetTick: " + TargetTick);
             _commonStateService.SetTick(_world.Tick);
             var hash = _hashHelper.CalcHash();
@@ -422,55 +486,67 @@ namespace Lockstep.Game {
             var tick = _world.Tick;
             _cmdBuffer.SetClientTick(tick);
             //clean useless snapshot
-            if (isNeedGenSnap && tick % snapshotFrameInterval == 0) {
+            if (isNeedGenSnap && tick % snapshotFrameInterval == 0)
+            {
                 CleanUselessSnapshot(System.Math.Min(_cmdBuffer.NextTickToCheck - 1, _world.Tick));
             }
         }
 
-        private void CleanUselessSnapshot(int tick){
+        private void CleanUselessSnapshot(int tick)
+        {
             //TODO
         }
 
-        private void DumpFrame(int hash){
-            if (_constStateService.IsClientMode) {
+        private void DumpFrame(int hash)
+        {
+            if (_constStateService.IsClientMode)
+            {
                 _dumpHelper.DumpFrame(!_hashHelper.TryGetValue(_world.Tick, out var val));
             }
-            else {
+            else
+            {
                 _dumpHelper.DumpFrame(true);
             }
         }
 
-        private void FillInputWithLastFrame(ServerFrame frame){
+        private void FillInputWithLastFrame(ServerFrame frame)
+        {
             int tick = frame.tick;
             var inputs = frame.Inputs;
             var lastServerInputs = tick == 0 ? null : _cmdBuffer.GetFrame(tick - 1)?.Inputs;
             var myInput = inputs[LocalActorId];
             //fill inputs with last frame's input (Input predict)
-            for (int i = 0; i < _actorCount; i++) {
+            for (int i = 0; i < _actorCount; i++)
+            {
                 inputs[i] = new Msg_PlayerInput(tick, _allActors[i], lastServerInputs?[i]?.Commands);
             }
 
             inputs[LocalActorId] = myInput;
         }
 
-        private void ProcessInputQueue(ServerFrame frame){
+        private void ProcessInputQueue(ServerFrame frame)
+        {
             var inputs = frame.Inputs;
-            foreach (var playerInput in _playerInputs) {
+            foreach (var playerInput in _playerInputs)
+            {
                 playerInput.Reset();
             }
 
-            foreach (var input in inputs) {
+            foreach (var input in inputs)
+            {
                 if (input.Commands == null) continue;
                 if (input.ActorId >= _playerInputs.Length) continue;
                 var inputEntity = _playerInputs[input.ActorId];
-                foreach (var command in input.Commands) {
+                foreach (var command in input.Commands)
+                {
                     Logger.Trace(this, input.ActorId + " >> " + input.Tick + ": " + input.Commands.Count());
                     _inputService.Execute(command, inputEntity);
                 }
             }
         }
 
-        void OnPursuingFrame(){
+        void OnPursuingFrame()
+        {
             _constStateService.IsPursueFrame = true;
             Debug.Log($"PurchaseServering curTick:" + _world.Tick);
             var progress = _world.Tick * 1.0f / _cmdBuffer.CurTickInServer;
@@ -480,40 +556,48 @@ namespace Lockstep.Game {
 
         #region NetEvents
 
-        void OnEvent_BorderVideoFrame(object param){
+        void OnEvent_BorderVideoFrame(object param)
+        {
             _videoFrames = param as Msg_RepMissFrame;
         }
 
-        void OnEvent_OnServerFrame(object param){
+        void OnEvent_OnServerFrame(object param)
+        {
             var msg = param as Msg_ServerFrames;
             _hasRecvInputMsg = true;
 
             _cmdBuffer.PushServerFrames(msg.frames);
         }
 
-        void OnEvent_OnServerMissFrame(object param){
+        void OnEvent_OnServerMissFrame(object param)
+        {
             Debug.Log($"OnEvent_OnServerMissFrame");
             var msg = param as Msg_RepMissFrame;
             _cmdBuffer.PushMissServerFrames(msg.frames, false);
         }
 
-        void OnEvent_OnPlayerPing(object param){
+        void OnEvent_OnPlayerPing(object param)
+        {
             var msg = param as Msg_G2C_PlayerPing;
             _cmdBuffer.OnPlayerPing(msg);
         }
 
-        void OnEvent_OnServerHello(object param){
+        void OnEvent_OnServerHello(object param)
+        {
             var msg = param as Msg_G2C_Hello;
             LocalActorId = msg.LocalId;
             Debug.Log("OnEvent_OnServerHello " + LocalActorId);
         }
 
-        void OnEvent_OnGameCreate(object param){
-            if (param is Msg_G2C_Hello msg) {
+        void OnEvent_OnGameCreate(object param)
+        {
+            if (param is Msg_G2C_Hello msg)
+            {
                 OnGameCreate(60, msg.LocalId, msg.UserCount);
             }
 
-            if (param is Msg_G2C_GameStartInfo smsg) {
+            if (param is Msg_G2C_GameStartInfo smsg)
+            {
                 _gameStartInfo = smsg;
                 OnGameCreate(60, 0, smsg.UserCount);
             }
@@ -522,15 +606,18 @@ namespace Lockstep.Game {
         }
 
 
-        void OnEvent_OnAllPlayerFinishedLoad(object param){
+        void OnEvent_OnAllPlayerFinishedLoad(object param)
+        {
             Debug.Log($"OnEvent_OnAllPlayerFinishedLoad");
             StartSimulate();
         }
 
-        void OnEvent_LevelLoadDone(object param){
+        void OnEvent_LevelLoadDone(object param)
+        {
             Debug.Log($"OnEvent_LevelLoadDone " + _constStateService.IsReconnecting);
             if (_constStateService.IsReconnecting || _constStateService.IsVideoMode ||
-                _constStateService.IsClientMode) {
+                _constStateService.IsClientMode)
+            {
                 StartSimulate();
             }
         }
