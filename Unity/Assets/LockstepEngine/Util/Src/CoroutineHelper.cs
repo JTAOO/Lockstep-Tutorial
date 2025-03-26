@@ -3,47 +3,57 @@ using System.Collections;
 using System.Collections.Generic;
 using Lockstep.Logging;
 
-namespace Lockstep.Util {
+namespace Lockstep.Util
+{
     public class YieldInstruction { }
 
-    public sealed class WaitForSeconds : YieldInstruction {
-        public WaitForSeconds(float seconds){
+    public sealed class WaitForSeconds : YieldInstruction
+    {
+        public WaitForSeconds(float seconds)
+        {
             this.Seconds = seconds;
         }
 
         public float Seconds { get; }
     }
 
-    public abstract class CustomYieldInstruction : IEnumerator {
+    public abstract class CustomYieldInstruction : IEnumerator
+    {
         public abstract bool keepWaiting { get; }
 
-        public object Current {
-            get { return (object) null; }
+        public object Current
+        {
+            get { return (object)null; }
         }
 
-        public bool MoveNext(){
+        public bool MoveNext()
+        {
             return this.keepWaiting;
         }
 
-        public void Reset(){ }
+        public void Reset() { }
     }
 
-    public class WaitForSecondsRealtime : CustomYieldInstruction {
+    public class WaitForSecondsRealtime : CustomYieldInstruction
+    {
         private float m_WaitUntilTime = -1f;
 
-        public WaitForSecondsRealtime(float time){
+        public WaitForSecondsRealtime(float time)
+        {
             this.waitTime = time;
         }
 
         public float waitTime { get; set; }
 
-        public override bool keepWaiting {
-            get {
-                if ((double) this.m_WaitUntilTime < 0.0)
-                    this.m_WaitUntilTime = LTime.realtimeSinceStartup + this.waitTime;
-                bool flag = (double) LTime.realtimeSinceStartup < (double) this.m_WaitUntilTime;
+        public override bool keepWaiting
+        {
+            get
+            {
+                if ((double)this.m_WaitUntilTime < 0.0)
+                    this.m_WaitUntilTime = LTime.realtimeSinceStartup + this.waitTime; // 自动重新初始化m_WaitUntilTime
+                bool flag = (double)LTime.realtimeSinceStartup < (double)this.m_WaitUntilTime; // 是否还在waiting?
                 if (!flag)
-                    this.m_WaitUntilTime = -1f;
+                    this.m_WaitUntilTime = -1f; // 如果结束waiting, 当前对象应该销毁, 这里的m_WaitUntilTime也就顺手给他初始化一下
                 return flag;
             }
         }
@@ -52,16 +62,20 @@ namespace Lockstep.Util {
 
     internal class YieldInsInfo { }
 
-    internal class WaitForSecondsInfo : YieldInsInfo {
-        public WaitForSecondsInfo(float beginTime){
+    internal class WaitForSecondsInfo : YieldInsInfo
+    {
+        public WaitForSecondsInfo(float beginTime)
+        {
             BeginTime = beginTime;
         }
 
         public float BeginTime { get; }
     }
 
-    internal class RoutineInfo {
-        public void Reset(){
+    internal class RoutineInfo
+    {
+        public void Reset()
+        {
             objYield = null;
             objYieldInfo = null;
         }
@@ -72,61 +86,77 @@ namespace Lockstep.Util {
         public IEnumerator routine;
     }
 
-    internal class CoroutineRunner {
+    internal class CoroutineRunner
+    {
         private List<RoutineInfo> lstRoutine = new List<RoutineInfo>();
 
-        public void StartCoroutine(IEnumerator routine){
-            if (null == routine) {
+        public void StartCoroutine(IEnumerator routine)
+        {
+            if (null == routine)
+            {
                 return;
             }
 
             routine.MoveNext();
-            var objRoutineInfo = new RoutineInfo {routine = routine};
+            var objRoutineInfo = new RoutineInfo { routine = routine };
             SetRoutineInfo(ref objRoutineInfo);
             lstRoutine.Add(objRoutineInfo);
         }
 
-        public void SetRoutineInfo(ref RoutineInfo objRoutineInfo){
-            if (objRoutineInfo.routine.Current is YieldInstruction) {
+        public void SetRoutineInfo(ref RoutineInfo objRoutineInfo)
+        {
+            if (objRoutineInfo.routine.Current is YieldInstruction)
+            {
                 objRoutineInfo.objYield = objRoutineInfo.routine.Current as YieldInstruction;
                 objRoutineInfo.objYieldInfo = new WaitForSecondsInfo(LTime.timeSinceLevelLoad);
             }
         }
 
-        public void Update(){
+        public void Update()
+        {
             List<int> lstNeedDelIndex = new List<int>();
-            for (int i = 0; i < lstRoutine.Count; ++i) {
+            for (int i = 0; i < lstRoutine.Count; ++i)
+            {
                 RoutineInfo item = lstRoutine[i];
-                if (null == item) {
+                if (null == item)
+                {
                     continue;
                 }
 
-                try {
+                try
+                {
                     bool bCallMoveNext = item.objYield == null || DealWithYieldInstruction(item);
-                    if (!bCallMoveNext) {
+                    if (!bCallMoveNext)
+                    {
                         continue;
                     }
 
-                    if (item.routine.MoveNext()) {
+                    if (item.routine.MoveNext())
+                    {
                         SetRoutineInfo(ref item);
                     }
-                    else {
+                    else
+                    {
                         lstNeedDelIndex.Add(i);
                     }
                 }
-                catch (Exception e) {
+                catch (Exception e)
+                {
                     Debug.LogError(e);
                 }
             }
 
-            for (int j = lstNeedDelIndex.Count - 1; j >= 0; j--) {
+            for (int j = lstNeedDelIndex.Count - 1; j >= 0; j--) // 操作删除列表成员时都应该倒序遍历
+            {
                 lstRoutine.RemoveAt(lstNeedDelIndex[j]);
             }
         }
 
-        public bool DealWithYieldInstruction(RoutineInfo objRoutineInfo){
-            if (objRoutineInfo.objYield is WaitForSeconds waitForSec) {
-                float objSpan = LTime.timeSinceLevelLoad - ((WaitForSecondsInfo) objRoutineInfo.objYieldInfo).BeginTime;
+        public bool DealWithYieldInstruction(RoutineInfo objRoutineInfo)
+        {
+            if (objRoutineInfo.objYield is WaitForSeconds waitForSec)
+            {
+                float objSpan = LTime.timeSinceLevelLoad - ((WaitForSecondsInfo)objRoutineInfo.objYieldInfo).BeginTime;
                 return objSpan > waitForSec.Seconds;
             }
 
@@ -135,23 +165,30 @@ namespace Lockstep.Util {
     }
 
 
-    public static class CoroutineHelper {
+    public static class CoroutineHelper
+    {
         static CoroutineRunner _runner = new CoroutineRunner();
-        public static void DoStart(){ }
+        public static void DoStart() { }
 
-        public static void DoUpdate(){
-            lock (_runner) {
-                try {
+        public static void DoUpdate()
+        {
+            lock (_runner)
+            {
+                try
+                {
                     _runner.Update();
                 }
-                catch (Exception e) {
+                catch (Exception e)
+                {
                     Debug.LogError(e);
                 }
             }
         }
 
-        public static void StartCoroutine(IEnumerator enumerator){
-            lock (_runner) {
+        public static void StartCoroutine(IEnumerator enumerator)
+        {
+            lock (_runner)
+            {
                 _runner.StartCoroutine(enumerator);
             }
         }

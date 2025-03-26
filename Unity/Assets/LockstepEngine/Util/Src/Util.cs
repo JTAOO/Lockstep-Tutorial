@@ -11,7 +11,7 @@ namespace Lockstep.Util {
 
         public static void UpdateServices(){
             LTime.DoUpdate();
-            CoroutineHelper.DoUpdate();
+            CoroutineHelper.DoUpdate(); // 实际未使用
         }
 
         public static void ExecuteCmd(string shellName, string workingDir){

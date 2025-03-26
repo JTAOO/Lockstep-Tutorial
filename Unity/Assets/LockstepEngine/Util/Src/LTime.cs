@@ -36,7 +36,7 @@ namespace Lockstep.Util {
             return this.Next(num) + min;
         }
 
-      
+
     }
     public class LRandom {
         private static Random _i = new Random(3274);
@@ -67,7 +67,7 @@ namespace Lockstep.Util {
         public static long realtimeSinceStartupMS =>  (long)(DateTime.Now - _initTime).TotalMilliseconds;
 
         private static DateTime _initTime;
-        private static DateTime lastFrameTime;
+        private static DateTime lastFrameTime; // 没初始化???
 
         public static void DoStart(){
             _initTime = DateTime.Now;
